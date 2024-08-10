@@ -2,6 +2,8 @@ from flask import Flask, render_template, redirect, url_for, flash, request, ses
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from config import Config
+from datetime import datetime
+import mysql.connector  # Asegúrate de que esta librería esté instalada
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -9,11 +11,23 @@ app.config.from_object(Config)
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
 
-from models import Medico, Pacientes, Consulta, Diagnostico, Log
+from models import Medico, Paciente, Consulta, Diagnostico, Log
 
 @app.route('/')
 def inicio():
-    return redirect(url_for('login'))
+    # Uso correcto del método connect en lugar de connector
+    conn = mysql.connector.connect(
+        host='mysql',  
+        user='root',
+        passwd='root',
+        database='db'
+    )
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM students')  # Ajusta la consulta según tu esquema de base de datos
+    resultados = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return render_template('index.html', students=resultados)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -41,68 +55,17 @@ def panel():
         return render_template('panel.html')
     return redirect(url_for('login'))
 
-
-from app import db
-from datetime import datetime
-
-class Medico(db.Model):
-    __tablename__ = 'medicos'
-    Medico_RFC = db.Column(db.String(15), primary_key=True)
-    Nombre = db.Column(db.String(50), nullable=False)
-    Apellidos = db.Column(db.String(50), nullable=False)
-    Cedula_Profesional = db.Column(db.String(20), nullable=False)
-    Contraseña = db.Column(db.String(100), nullable=False)
-    Correo = db.Column(db.String(100), nullable=False)
-    RolID = db.Column(db.Integer, db.ForeignKey('roles.RolID'))
-
-class Paciente(db.Model):
-    __tablename__ = 'pacientes'
-    PacienteID = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    Nombre = db.Column(db.String(50), nullable=False)
-    Apellido = db.Column(db.String(50), nullable=False)
-    Edad = db.Column(db.Integer, nullable=False)
-    Fecha_Nacimiento = db.Column(db.Date, nullable=False)
-    Alergias = db.Column(db.Text)
-    Enfermedades_Cronicas = db.Column(db.Text)
-
-class Consulta(db.Model):
-    __tablename__ = 'consultas'
-    ConsultaID = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    Altura = db.Column(db.Numeric(5,2))
-    LPM = db.Column(db.Integer)
-    SO = db.Column(db.Numeric(4,1))
-    Glucosa = db.Column(db.Numeric(5,2))
-    Peso = db.Column(db.Numeric(5,2))
-    Fecha_Consulta = db.Column(db.Date, nullable=False, default=datetime.utcnow)
-    PacienteID = db.Column(db.Integer, db.ForeignKey('pacientes.PacienteID'))
-    Medico_RFC = db.Column(db.String(15), db.ForeignKey('medicos.Medico_RFC'))
-
-class Diagnostico(db.Model):
-    __tablename__ = 'diagnosticos'
-    DiagnosticoID = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    ConsultaID = db.Column(db.Integer, db.ForeignKey('consultas.ConsultaID'))
-    Tratamiento = db.Column(db.Text)
-    Sintomas = db.Column(db.Text)
-    Diagnostico = db.Column(db.Text)
-
-class Log(db.Model):
-    __tablename__ = 'logs'
-    LogID = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    Action = db.Column(db.String(50), nullable=False)
-    Timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-    Medico_RFC = db.Column(db.String(15), db.ForeignKey('medicos.Medico_RFC'))
-
 @app.route('/medicos')
-def view_doctors():
+def ver_medicos():
     if not session.get('logged_in'):
         return redirect(url_for('login'))
-    doctors = Medico.query.all()
-    return render_template('doctors.html', doctors=doctors)
+    medicos = Medico.query.all()
+    return render_template('medicos.html', medicos=medicos)
 
-@app.route('/medicos/add', methods=['GET', 'POST'])
-def add_doctor():
+@app.route('/medicos/agregar', methods=['GET', 'POST'])
+def agregar_medico():
     if request.method == 'POST':
-        new_doctor = Medico(
+        nuevo_medico = Medico(
             Medico_RFC=request.form['Medico_RFC'],
             Nombre=request.form['Nombre'],
             Apellidos=request.form['Apellidos'],
@@ -111,26 +74,24 @@ def add_doctor():
             Correo=request.form['Correo'],
             RolID=request.form['RolID']
         )
-        db.session.add(new_doctor)
+        db.session.add(nuevo_medico)
         db.session.commit()
-        flash('Médico agregado exitosamente!')
-        return redirect(url_for('view_doctors'))
-    return render_template('add_doctor.html')
-
-
+        flash('¡Médico agregado exitosamente!')
+        return redirect(url_for('ver_medicos'))
+    return render_template('agregar_medico.html')
 
 @app.route('/pacientes')
-def view_patients():
+def ver_pacientes():
     if not session.get('logged_in'):
         return redirect(url_for('login'))
     medico_rfc = session.get('medico_rfc')
-    patients = Paciente.query.join(Consulta).filter_by(Medico_RFC=medico_rfc).all()
-    return render_template('patients.html', patients=patients)
+    pacientes = Paciente.query.join(Consulta).filter_by(Medico_RFC=medico_rfc).all()
+    return render_template('pacientes.html', pacientes=pacientes)
 
-@app.route('/pacientes/add', methods=['GET', 'POST'])
-def add_patient():
+@app.route('/pacientes/agregar', methods=['GET', 'POST'])
+def agregar_paciente():
     if request.method == 'POST':
-        new_patient = Paciente(
+        nuevo_paciente = Paciente(
             Nombre=request.form['Nombre'],
             Apellido=request.form['Apellido'],
             Edad=request.form['Edad'],
@@ -138,17 +99,16 @@ def add_patient():
             Alergias=request.form['Alergias'],
             Enfermedades_Cronicas=request.form['Enfermedades_Cronicas']
         )
-        db.session.add(new_patient)
+        db.session.add(nuevo_paciente)
         db.session.commit()
-        flash('Paciente agregado exitosamente!')
-        return redirect(url_for('view_patients'))
-    return render_template('add_patient.html')
-
+        flash('¡Paciente agregado exitosamente!')
+        return redirect(url_for('ver_pacientes'))
+    return render_template('agregar_paciente.html')
 
 @app.route('/exploracion/<int:paciente_id>', methods=['GET', 'POST'])
-def exploration(paciente_id):
+def exploracion(paciente_id):
     if request.method == 'POST':
-        new_consulta = Consulta(
+        nueva_consulta = Consulta(
             Altura=request.form['Altura'],
             LPM=request.form['LPM'],
             SO=request.form['SO'],
@@ -158,23 +118,29 @@ def exploration(paciente_id):
             PacienteID=paciente_id,
             Medico_RFC=session.get('medico_rfc')
         )
-        db.session.add(new_consulta)
+        db.session.add(nueva_consulta)
         db.session.commit()
         
-        new_diagnostico = Diagnostico(
-            ConsultaID=new_consulta.ConsultaID,
+        nuevo_diagnostico = Diagnostico(
+            ConsultaID=nueva_consulta.ConsultaID,
             Tratamiento=request.form['Tratamiento'],
             Sintomas=request.form['Sintomas'],
             Diagnostico=request.form['Diagnostico']
         )
-        db.session.add(new_diagnostico)
+        db.session.add(nuevo_diagnostico)
         db.session.commit()
 
-        flash('Exploración y diagnóstico guardados exitosamente!')
-        return redirect(url_for('view_patients'))
-    return render_template('exploration.html')
+        flash('¡Exploración y diagnóstico guardados exitosamente!')
+        return redirect(url_for('ver_pacientes'))
+    return render_template('exploracion.html')
 
-
+@app.route('/mis_pacientes')
+def mis_pacientes():
+    if 'logged_in' not in session:
+        return redirect(url_for('login'))
+    medico_rfc = session['medico_rfc']
+    pacientes = db.session.query(Paciente).join(Consulta).filter(Consulta.Medico_RFC == medico_rfc).all()
+    return render_template('mis_pacientes.html', pacientes=pacientes)
 
 if __name__ == '__main__':
     app.run(debug=True)

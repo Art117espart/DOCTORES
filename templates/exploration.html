@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exploración y Diagnóstico</title>
+</head>
+<body>
+    <form method="POST" action="{{ url_for('exploration', paciente_id=paciente_id) }}">
+        <input type="text" name="Altura" placeholder="Altura (cm)">
+        <input type="text" name="Peso" placeholder="Peso (kg)">
+        <input type="text" name="LPM" placeholder="LPM">
+        <input type="text" name="SO" placeholder="SO">
+        <input type="text" name="Glucosa" placeholder="Glucosa">
+        <input type="text" name="Tratamiento" placeholder="Tratamiento">
+        <textarea name="Sintomas" placeholder="Síntomas"></textarea>
+        <textarea name="Diagnostico" placeholder="Diagnóstico"></textarea>
+        <button type="submit">Guardar</button>
+    </form>
+</body>
+</html>
