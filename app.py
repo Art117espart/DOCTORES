@@ -1,146 +1,158 @@
-from flask import Flask, render_template, redirect, url_for, flash, request, session
-from flask_sqlalchemy import SQLAlchemy
-from flask_bcrypt import Bcrypt
-from config import Config
-from datetime import datetime
-import mysql.connector  # Asegúrate de que esta librería esté instalada
+from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask_mysqldb import MySQL
+from werkzeug.security import check_password_hash, generate_password_hash
+from flask_wtf import FlaskForm
+from wtforms import StringField, PasswordField, DateField, IntegerField, TextAreaField, SubmitField
+from wtforms.validators import DataRequired, Length, Email, EqualTo
 
 app = Flask(__name__)
-app.config.from_object(Config)
 
-db = SQLAlchemy(app)
-bcrypt = Bcrypt(app)
+# Configuración de la base de datos MySQL
+app.config['MYSQL_HOST'] = '127.0.0.1'
+app.config['MYSQL_USER'] = 'root'
+app.config['MYSQL_PASSWORD'] = 'ESPARTAN117.'
+app.config['MYSQL_DB'] = 'DB_Medicos'
 
-from models import Medico, Paciente, Consulta, Diagnostico, Log
+app.secret_key = 'mysecret'
 
-@app.route('/')
-def inicio():
-    # Uso correcto del método connect en lugar de connector
-    conn = mysql.connector.connect(
-        host='mysql',  
-        user='root',
-        passwd='root',
-        database='db'
-    )
-    cursor = conn.cursor()
-    cursor.execute('SELECT * FROM students')  # Ajusta la consulta según tu esquema de base de datos
-    resultados = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    return render_template('index.html', students=resultados)
+mysql = MySQL(app)
+
+# Formulario para el login
+class LoginForm(FlaskForm):
+    rfc = StringField('RFC', validators=[DataRequired(), Length(max=15)])
+    password = PasswordField('Contraseña', validators=[DataRequired()])
+    submit = SubmitField('Iniciar sesión')
+
+# Formulario para pacientes
+class PatientForm(FlaskForm):
+    nombre = StringField('Nombre', validators=[DataRequired(), Length(max=50)])
+    apellido = StringField('Apellido', validators=[DataRequired(), Length(max=50)])
+    edad = IntegerField('Edad', validators=[DataRequired()])
+    fecha_nacimiento = DateField('Fecha de Nacimiento', format='%Y-%m-%d', validators=[DataRequired()])
+    alergias = TextAreaField('Alergias')
+    enfermedades_cronicas = TextAreaField('Enfermedades Crónicas')
+    submit = SubmitField('Guardar Paciente')
+
+# Formulario para diagnósticos
+class DiagnosisForm(FlaskForm):
+    consulta_id = IntegerField('Consulta ID', validators=[DataRequired()])
+    tratamiento = TextAreaField('Tratamiento')
+    sintomas = TextAreaField('Síntomas')
+    diagnostico = TextAreaField('Diagnóstico')
+    submit = SubmitField('Guardar Diagnóstico')
+
+# Formulario para recetas médicas
+class PrescriptionForm(FlaskForm):
+    consulta_id = IntegerField('Consulta ID', validators=[DataRequired()])
+    receta = TextAreaField('Receta')
+    submit = SubmitField('Guardar Receta')
+
+# Formulario para historial médico
+class MedicalHistoryForm(FlaskForm):
+    paciente_id = IntegerField('Paciente ID', validators=[DataRequired()])
+    submit = SubmitField('Agregar Historial')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    if request.method == 'POST':
-        rfc = request.form['rfc']
-        contraseña = request.form['contraseña']
-        medico = Medico.query.filter_by(Medico_RFC=rfc).first()
-        if medico and bcrypt.check_password_hash(medico.Contraseña, contraseña):
-            session['logged_in'] = True
-            session['medico_rfc'] = medico.Medico_RFC
-            return redirect(url_for('panel'))
+    form = LoginForm()
+    if form.validate_on_submit():
+        rfc = form.rfc.data
+        password = form.password.data
+        cur = mysql.connection.cursor()
+        cur.execute('SELECT * FROM Medicos WHERE Medico_RFC = %s', [rfc])
+        medico = cur.fetchone()
+        if medico and check_password_hash(medico[4], password):
+            session['medico_rfc'] = rfc
+            flash('Inicio de sesión exitoso.')
+            return redirect(url_for('dashboard'))
         else:
-            flash('RFC o Contraseña incorrectos', 'danger')
-    return render_template('login.html')
+            flash('RFC o contraseña incorrectos.')
+    return render_template('login.html', form=form)
 
 @app.route('/logout')
 def logout():
-    session.clear()
-    flash('Has cerrado sesión', 'success')
+    session.pop('medico_rfc', None)
+    flash('Sesión cerrada.')
     return redirect(url_for('login'))
 
-@app.route('/panel')
-def panel():
-    if 'logged_in' in session:
-        return render_template('panel.html')
-    return redirect(url_for('login'))
-
-@app.route('/medicos')
-def ver_medicos():
-    if not session.get('logged_in'):
-        return redirect(url_for('login'))
-    medicos = Medico.query.all()
-    return render_template('medicos.html', medicos=medicos)
-
-@app.route('/medicos/agregar', methods=['GET', 'POST'])
-def agregar_medico():
-    if request.method == 'POST':
-        nuevo_medico = Medico(
-            Medico_RFC=request.form['Medico_RFC'],
-            Nombre=request.form['Nombre'],
-            Apellidos=request.form['Apellidos'],
-            Cedula_Profesional=request.form['Cedula_Profesional'],
-            Contraseña=bcrypt.generate_password_hash(request.form['Contraseña']).decode('utf-8'),
-            Correo=request.form['Correo'],
-            RolID=request.form['RolID']
-        )
-        db.session.add(nuevo_medico)
-        db.session.commit()
-        flash('¡Médico agregado exitosamente!')
-        return redirect(url_for('ver_medicos'))
-    return render_template('agregar_medico.html')
-
-@app.route('/pacientes')
-def ver_pacientes():
-    if not session.get('logged_in'):
-        return redirect(url_for('login'))
-    medico_rfc = session.get('medico_rfc')
-    pacientes = Paciente.query.join(Consulta).filter_by(Medico_RFC=medico_rfc).all()
-    return render_template('pacientes.html', pacientes=pacientes)
-
-@app.route('/pacientes/agregar', methods=['GET', 'POST'])
-def agregar_paciente():
-    if request.method == 'POST':
-        nuevo_paciente = Paciente(
-            Nombre=request.form['Nombre'],
-            Apellido=request.form['Apellido'],
-            Edad=request.form['Edad'],
-            Fecha_Nacimiento=request.form['Fecha_Nacimiento'],
-            Alergias=request.form['Alergias'],
-            Enfermedades_Cronicas=request.form['Enfermedades_Cronicas']
-        )
-        db.session.add(nuevo_paciente)
-        db.session.commit()
-        flash('¡Paciente agregado exitosamente!')
-        return redirect(url_for('ver_pacientes'))
-    return render_template('agregar_paciente.html')
-
-@app.route('/exploracion/<int:paciente_id>', methods=['GET', 'POST'])
-def exploracion(paciente_id):
-    if request.method == 'POST':
-        nueva_consulta = Consulta(
-            Altura=request.form['Altura'],
-            LPM=request.form['LPM'],
-            SO=request.form['SO'],
-            Glucosa=request.form['Glucosa'],
-            Peso=request.form['Peso'],
-            Fecha_Consulta=request.form['Fecha_Consulta'],
-            PacienteID=paciente_id,
-            Medico_RFC=session.get('medico_rfc')
-        )
-        db.session.add(nueva_consulta)
-        db.session.commit()
-        
-        nuevo_diagnostico = Diagnostico(
-            ConsultaID=nueva_consulta.ConsultaID,
-            Tratamiento=request.form['Tratamiento'],
-            Sintomas=request.form['Sintomas'],
-            Diagnostico=request.form['Diagnostico']
-        )
-        db.session.add(nuevo_diagnostico)
-        db.session.commit()
-
-        flash('¡Exploración y diagnóstico guardados exitosamente!')
-        return redirect(url_for('ver_pacientes'))
-    return render_template('exploracion.html')
-
-@app.route('/mis_pacientes')
-def mis_pacientes():
-    if 'logged_in' not in session:
+@app.route('/dashboard')
+def dashboard():
+    if 'medico_rfc' not in session:
         return redirect(url_for('login'))
     medico_rfc = session['medico_rfc']
-    pacientes = db.session.query(Paciente).join(Consulta).filter(Consulta.Medico_RFC == medico_rfc).all()
-    return render_template('mis_pacientes.html', pacientes=pacientes)
+    cur = mysql.connection.cursor()
+    cur.execute('SELECT * FROM Pacientes WHERE PacienteID IN (SELECT PacienteID FROM Consultas WHERE Medico_RFC = %s)', [medico_rfc])
+    pacientes = cur.fetchall()
+    return render_template('dashboard.html', pacientes=pacientes)
+
+@app.route('/pacientes')
+def pacientes():
+    if 'medico_rfc' not in session:
+        return redirect(url_for('login'))
+    form = PatientForm()
+    if form.validate_on_submit():
+        nombre = form.nombre.data
+        apellido = form.apellido.data
+        edad = form.edad.data
+        fecha_nacimiento = form.fecha_nacimiento.data
+        alergias = form.alergias.data
+        enfermedades_cronicas = form.enfermedades_cronicas.data
+
+        cur = mysql.connection.cursor()
+        cur.execute('INSERT INTO Pacientes (Nombre, Apellido, Edad, Fecha_Nacimiento, Alergias, Enfermedades_Cronicas) VALUES (%s, %s, %s, %s, %s, %s)', 
+                     (nombre, apellido, edad, fecha_nacimiento, alergias, enfermedades_cronicas))
+        mysql.connection.commit()
+        flash('Paciente agregado correctamente')
+    return render_template('pacientes.html', form=form)
+
+@app.route('/diagnosticos', methods=['GET', 'POST'])
+def diagnosticos():
+    if 'medico_rfc' not in session:
+        return redirect(url_for('login'))
+    form = DiagnosisForm()
+    if form.validate_on_submit():
+        consulta_id = form.consulta_id.data
+        tratamiento = form.tratamiento.data
+        sintomas = form.sintomas.data
+        diagnostico = form.diagnostico.data
+
+        cur = mysql.connection.cursor()
+        cur.execute('INSERT INTO Diagnosticos (ConsultaID, Tratamiento, Síntomas, Diagnostico) VALUES (%s, %s, %s, %s)', 
+                     (consulta_id, tratamiento, sintomas, diagnostico))
+        mysql.connection.commit()
+        flash('Diagnóstico agregado correctamente')
+    return render_template('diagnosticos.html', form=form)
+
+@app.route('/recetas', methods=['GET', 'POST'])
+def recetas():
+    if 'medico_rfc' not in session:
+        return redirect(url_for('login'))
+    form = PrescriptionForm()
+    if form.validate_on_submit():
+        consulta_id = form.consulta_id.data
+        receta = form.receta.data
+
+        cur = mysql.connection.cursor()
+        cur.execute('INSERT INTO Recetas_Medicas (ConsultaID, Receta) VALUES (%s, %s)', 
+                     (consulta_id, receta))
+        mysql.connection.commit()
+        flash('Receta médica agregada correctamente')
+    return render_template('recetas.html', form=form)
+
+@app.route('/historial', methods=['GET', 'POST'])
+def historial():
+    if 'medico_rfc' not in session:
+        return redirect(url_for('login'))
+    form = MedicalHistoryForm()
+    if form.validate_on_submit():
+        paciente_id = form.paciente_id.data
+
+        cur = mysql.connection.cursor()
+        cur.execute('INSERT INTO Historial_Medico (Medico_RFC, PacienteID) VALUES (%s, %s)', 
+                     (session['medico_rfc'], paciente_id))
+        mysql.connection.commit()
+        flash('Historial médico agregado correctamente')
+    return render_template('historial.html', form=form)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(port=3000, debug=True)

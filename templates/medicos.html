@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Médicos</title>
+</head>
+<body>
+    <h1>Lista de Médicos</h1>
+    <a href="{{ url_for('agregar_medico') }}">Agregar Médico</a>
+    <table>
+        <thead>
+            <tr>
+                <th>RFC</th>
+                <th>Nombre</th>
+                <th>Apellidos</th>
+                <th>Cédula Profesional</th>
+                <th>Correo</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for medico in medicos %}
+            <tr>
+                <td>{{ medico.Medico_RFC }}</td>
+                <td>{{ medico.Nombre }}</td>
+                <td>{{ medico.Apellidos }}</td>
+                <td>{{ medico.Cedula_Profesional }}</td>
+                <td>{{ medico.Correo }}</td>
+                <td>
+                    <a href="{{ url_for('editar_medico', rfc=medico.Medico_RFC) }}">Editar</a>
+                    <form action="{{ url_for('eliminar_medico', rfc=medico.Medico_RFC) }}" method="post" style="display:inline;">
+                        <button type="submit">Eliminar</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
