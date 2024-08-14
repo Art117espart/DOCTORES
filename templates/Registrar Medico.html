@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro Médico</title>
+    <link rel="stylesheet" href="/static/CSS/styles2.css">
+</head>
+<body>
+    <div class="container">
+        <div class="image-side">
+            <img src="medicos.jpg" alt="Imagen del médico">
+        </div>
+        <div class="form-side">
+            <h2>REGISTRO MÉDICO</h2>
+
+            <form id="registerForm">
+                <input type="text" id="nombre" placeholder="Nombre completo" required>
+                <input type="email" id="correo" placeholder="Correo electrónico" required>
+                <input type="password" id="password" placeholder="Contraseña" required>
+                <input type="text" id="rfc" placeholder="RFC" required>
+                <button type="submit">Registrar</button>
+            </form>
+            <div id="alert" class="alert">
+                <i id="alert-icon"></i><span id="alert-message"></span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('registerForm').addEventListener('submit', function(event) {
+            event.preventDefault(); // Evitar que el formulario se envíe
+            const nombre = document.getElementById('nombre').value.trim();
+            const correo = document.getElementById('correo').value.trim();
+            const password = document.getElementById('password').value.trim();
+            const rfc = document.getElementById('rfc').value.trim();
+
+            const alertBox = document.getElementById('alert');
+            const alertIcon = document.getElementById('alert-icon');
+            const alertMessage = document.getElementById('alert-message');
+
+            // Validar que todos los campos estén llenos (puedes añadir más validaciones)
+            if (nombre && correo && password && rfc) {
+                // Mostrar alerta de éxito
+                alertBox.className = 'alert alert-success';
+                alertIcon.textContent = '✔'; 
+                alertMessage.textContent = 'Registro exitoso';
+            } else {
+                // Mostrar alerta de error
+                alertBox.className = 'alert alert-error';
+                alertIcon.textContent = '✘'; 
+                alertMessage.textContent = 'Error en el registro. Por favor, complete todos los campos.';
+            }
+            alertBox.style.display = 'block';
+        });
+    </script>
+</body>
+</html>
