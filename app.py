@@ -10,7 +10,7 @@ app = Flask(__name__)
 # Configuración de la base de datos MySQL
 app.config['MYSQL_HOST'] = '127.0.0.1'
 app.config['MYSQL_USER'] = 'root'
-app.config['MYSQL_PASSWORD'] = 'ESPARTAN117.'
+app.config['MYSQL_PASSWORD'] = '300803'
 app.config['MYSQL_DB'] = 'DB_Medicos'
 
 app.secret_key = 'mysecret'
@@ -85,7 +85,7 @@ def dashboard():
     pacientes = cur.fetchall()
     return render_template('dashboard.html', pacientes=pacientes)
 
-@app.route('/pacientes')
+@app.route('/pacientes', methods=['GET', 'POST'])
 def pacientes():
     if 'medico_rfc' not in session:
         return redirect(url_for('login'))
@@ -103,6 +103,7 @@ def pacientes():
                      (nombre, apellido, edad, fecha_nacimiento, alergias, enfermedades_cronicas))
         mysql.connection.commit()
         flash('Paciente agregado correctamente')
+        return redirect(url_for('dashboard'))
     return render_template('pacientes.html', form=form)
 
 @app.route('/diagnosticos', methods=['GET', 'POST'])
@@ -121,6 +122,7 @@ def diagnosticos():
                      (consulta_id, tratamiento, sintomas, diagnostico))
         mysql.connection.commit()
         flash('Diagnóstico agregado correctamente')
+        return redirect(url_for('dashboard'))
     return render_template('diagnosticos.html', form=form)
 
 @app.route('/recetas', methods=['GET', 'POST'])
@@ -137,6 +139,7 @@ def recetas():
                      (consulta_id, receta))
         mysql.connection.commit()
         flash('Receta médica agregada correctamente')
+        return redirect(url_for('dashboard'))
     return render_template('recetas.html', form=form)
 
 @app.route('/historial', methods=['GET', 'POST'])
@@ -152,6 +155,7 @@ def historial():
                      (session['medico_rfc'], paciente_id))
         mysql.connection.commit()
         flash('Historial médico agregado correctamente')
+        return redirect(url_for('dashboard'))
     return render_template('historial.html', form=form)
 
 if __name__ == '__main__':

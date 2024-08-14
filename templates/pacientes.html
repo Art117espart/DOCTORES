@@ -1,11 +1,62 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Paciente</title>
+    <title>Pacientes</title>
 </head>
 <body>
-    
+    <h2>Agregar Paciente</h2>
+    <form method="POST" action="{{ url_for('pacientes') }}">
+        {{ form.hidden_tag() }}
+        <div>
+            {{ form.nombre.label }}<br>
+            {{ form.nombre(size=32) }}<br>
+            {% for error in form.nombre.errors %}
+                <span style="color: red;">[{{ error }}]</span><br>
+            {% endfor %}
+        </div>
+        <div>
+            {{ form.apellido.label }}<br>
+            {{ form.apellido(size=32) }}<br>
+            {% for error in form.apellido.errors %}
+                <span style="color: red;">[{{ error }}]</span><br>
+            {% endfor %}
+        </div>
+        <div>
+            {{ form.edad.label }}<br>
+            {{ form.edad() }}<br>
+            {% for error in form.edad.errors %}
+                <span style="color: red;">[{{ error }}]</span><br>
+            {% endfor %}
+        </div>
+        <div>
+            {{ form.fecha_nacimiento.label }}<br>
+            {{ form.fecha_nacimiento() }}<br>
+            {% for error in form.fecha_nacimiento.errors %}
+                <span style="color: red;">[{{ error }}]</span><br>
+            {% endfor %}
+        </div>
+        <div>
+            {{ form.alergias.label }}<br>
+            {{ form.alergias(cols=40, rows=4) }}<br>
+        </div>
+        <div>
+            {{ form.enfermedades_cronicas.label }}<br>
+            {{ form.enfermedades_cronicas(cols=40, rows=4) }}<br>
+        </div>
+        <div>
+            {{ form.submit() }}
+        </div>
+    </form>
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <ul>
+          {% for message in messages %}
+            <li>{{ message }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
 </body>
 </html>

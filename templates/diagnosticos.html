@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diagnósticos</title>
+</head>
+<body>
+    <h1>Agregar Diagnóstico</h1>
+    <form method="POST" action="{{ url_for('diagnosticos') }}">
+        {{ form.hidden_tag() }}
+        <p>
+            {{ form.consulta_id.label }}<br>
+            {{ form.consulta_id() }}<br>
+            {% for error in form.consulta_id.errors %}
+                <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+        <p>
+            {{ form.tratamiento.label }}<br>
+            {{ form.tratamiento(rows=5, cols=32) }}<br>
+        </p>
+        <p>
+            {{ form.sintomas.label }}<br>
+            {{ form.sintomas(rows=5, cols=32) }}<br>
+        </p>
+        <p>
+            {{ form.diagnostico.label }}<br>
+            {{ form.diagnostico(rows=5, cols=32) }}<br>
+        </p>
+        <p>{{ form.submit() }}</p>
+    </form>
+
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <ul>
+            {% for message in messages %}
+                <li>{{ message }}</li>
+            {% endfor %}
+            </ul>
+        {% endif %}
+    {% endwith %}
+</body>
+</html>
