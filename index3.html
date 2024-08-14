@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inicio de Sesión</title>
+    <link rel="stylesheet" href="styles3.css">
+</head>
+<body>
+    <div class="container">
+        <div class="form-side">
+            <h2>Inicio de Sesión Administrador</h2>
+            <form id="loginForm">
+                <input type="text" id="username" placeholder="Nombre de usuario" required>
+                <input type="password" id="password" placeholder="Contraseña" required>
+                <button type="submit">Iniciar sesión</button>
+            </form>
+            <div id="loginAlert" class="alert">
+                <i id="loginAlert-icon"></i><span id="loginAlert-message"></span>
+            </div>
+        </div>
+        <div class="image-side">
+            <img src="admin.webp" alt="Imagen de Inicio de Sesión">
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', function(event) {
+            event.preventDefault(); // Evitar que el formulario se envíe
+
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+            const loginAlertBox = document.getElementById('loginAlert');
+            const loginAlertIcon = document.getElementById('loginAlert-icon');
+            const loginAlertMessage = document.getElementById('loginAlert-message');
+
+            // Credenciales del administrador
+            const adminUsername = 'admin';
+            const adminPassword = 'adminpass';
+
+            if (username === adminUsername && password === adminPassword) {
+                window.location.href = 'admin.html'; // Redirige al administrador
+            } else {
+                // Mostrar alerta de error
+                loginAlertBox.className = 'alert alert-error';
+                loginAlertIcon.textContent = '✘'; 
+                loginAlertMessage.textContent = 'Credenciales incorrectas. Inténtalo de nuevo.';
+                loginAlertBox.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>
+
